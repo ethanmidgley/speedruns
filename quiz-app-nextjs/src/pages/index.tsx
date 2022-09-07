@@ -1,56 +1,75 @@
-import {
-  Link as ChakraLink,
-  Text,
-  Code,
-  List,
-  ListIcon,
-  ListItem,
-} from '@chakra-ui/react'
-import { CheckCircleIcon, LinkIcon } from '@chakra-ui/icons'
+import { ChevronRightIcon } from "@chakra-ui/icons";
+import { Box, Button, Heading, Spinner } from "@chakra-ui/react";
+import { useState } from "react";
+import { Question } from "../components/Question";
+import useAnswerTracker from "../hooks/useAnswerTracker";
+import useQuestions from "../hooks/useQuestions";
 
-import { Hero } from '../components/Hero'
-import { Container } from '../components/Container'
-import { Main } from '../components/Main'
-import { DarkModeSwitch } from '../components/DarkModeSwitch'
-import { CTA } from '../components/CTA'
-import { Footer } from '../components/Footer'
+const NUMBER_OF_QUESTIONS = 5;
 
-const Index = () => (
-  <Container height="100vh">
-    <Hero />
-    <Main>
-      <Text color="text">
-        Example repository of <Code>Next.js</Code> + <Code>chakra-ui</Code> +{' '}
-        <Code>TypeScript</Code>.
-      </Text>
+const Index = () => {
+  const [{ questions, loading }, refetch] = useQuestions({
+    amount: NUMBER_OF_QUESTIONS,
+  });
+  const [_, setAnswer, checkScore] = useAnswerTracker(NUMBER_OF_QUESTIONS);
+  const [score, setScore] = useState<number>(0);
+  const [gameState, setGameState] = useState<"started" | "idle" | "finished">(
+    "idle"
+  );
 
-      <List spacing={3} my={0} color="text">
-        <ListItem>
-          <ListIcon as={CheckCircleIcon} color="green.500" />
-          <ChakraLink
-            isExternal
-            href="https://chakra-ui.com"
-            flexGrow={1}
-            mr={2}
-          >
-            Chakra UI <LinkIcon />
-          </ChakraLink>
-        </ListItem>
-        <ListItem>
-          <ListIcon as={CheckCircleIcon} color="green.500" />
-          <ChakraLink isExternal href="https://nextjs.org" flexGrow={1} mr={2}>
-            Next.js <LinkIcon />
-          </ChakraLink>
-        </ListItem>
-      </List>
-    </Main>
+  const startGame = () => {
+    if (gameState === "finished") {
+      refetch();
+    }
+    setGameState("started");
+  };
 
-    <DarkModeSwitch />
-    <Footer>
-      <Text>Next ❤️ Chakra</Text>
-    </Footer>
-    <CTA />
-  </Container>
-)
+  const endGame = () => {
+    setGameState("finished");
+  };
 
-export default Index
+  let body = null;
+  if (loading) {
+    body = <Spinner />;
+  } else if (gameState === "finished") {
+    body = (
+      <>
+        <Heading>
+          Well done you got a score of {score} out of {NUMBER_OF_QUESTIONS}
+        </Heading>
+        <Button onClick={startGame}>Click here to play again</Button>
+      </>
+    );
+  } else if (gameState === "idle") {
+    body = <Button onClick={startGame}>Play</Button>;
+  } else if (gameState === "started") {
+    body = (
+      <>
+        {questions.map((q, idx) => (
+          <Question
+            onAnswer={(ans) => setAnswer(idx, ans)}
+            question={q}
+            key={idx}
+          />
+        ))}
+        <Button
+          onClick={() => {
+            setScore(checkScore(questions));
+            endGame();
+          }}
+        >
+          Check score
+        </Button>
+      </>
+    );
+  }
+
+  return (
+    <Box textAlign={"center"} mx={"auto"}>
+      <Heading>Super fun quiz</Heading>
+      {body}
+    </Box>
+  );
+};
+
+export default Index;
